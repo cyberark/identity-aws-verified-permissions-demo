@@ -1,0 +1,34 @@
+[[source]]
+name = "artifactory"
+url = "https://artifactory.cyberng.com/artifactory/api/pypi/everest-pypi-virtual/simple"
+verify_ssl = true
+
+[dev-packages]
+tools-configuration-cyberark = "~=3.0.0"
+stack-utils-cyberark = "~=2.1.0"
+infra-automation-utils-cyberark = "~=2.4.0"
+infra-deployment-utils-cdk-cyberark = "~=1.0.0"
+pytest-mock = "*"
+pycodestyle = "*"
+python-dateutil = "*"
+python-dotenv = "*"
+sphinxcontrib-redoc = "*"
+infra-crypto-cyberark = "*"
+
+[packages]
+#boto3 = {path = "./python_sdk/boto3-1.26.28-py3-none-any.whl"}
+#botocore = {path = "./python_sdk/botocore-1.29.28-py3-none-any.whl"}
+infra-logging-cyberark = "~=1.2.0"
+everest-env-utils-cyberark = "~=1.3.0"
+aws-lambda-context = "*"
+requests = "*"
+infra-config-cyberark = {version = "~=4.0.0",index = "artifactory"}
+aws-lambda-powertools = {extras = ["all"],version = "*"}
+pydantic = "*"
+cachetools = "*"
+cel-python = "*"
+infra-idaptive-utils-cyberark = "*"
+cryptography = "*"
+
+[requires]
+python_version = "3.8"

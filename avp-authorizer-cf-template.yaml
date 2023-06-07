@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: An API Gateway and Lambda function with a custom Lambda Authorizer based on CyberArk Identity and Amazon Verified Permissions
+
+Parameters:
+  policyStoreID:
+    Type: String
+  IdentityTenantUrl:
+    Type: String
+  lambdaFunctionName:
+    Type: String
+    AllowedPattern: '[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+'
+    Default: protected-resource-service-lambda
+
+Resources:
+  SampleRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: Sample API Gateway
+      Description: Sample API Gateway Integration with a Lambda Autorizer based on
+        Amazon Verified Permissions and CyberArk Identity
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  SampleServiceLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import json
+          
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Hello from Lambda!')
+              }
+
+      Description: This is an example of a service lambda that is protected by Verified Permisions Authorizer
+      FunctionName: !Ref lambdaFunctionName
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Role: !GetAtt SampleServiceLambdaIAMRole.Arn
+      Runtime: python3.9
+    DependsOn:
+    - SampleServiceLambdaIAMRole
+
+  SampleServiceLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: LogLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource:
+              - '*'
+
+  ProtectedResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt SampleRestApi.RootResourceId
+      PathPart: protected-resource
+      RestApiId: !Ref SampleRestApi
+    DependsOn:
+    - SampleRestApi
+
+  ProtectedPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SampleRestApi
+      ResourceId: !Ref ProtectedResource
+      HttpMethod: POST
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref AmazonVerifiedPermissionTokenAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt SampleServiceLambdaFunction.Arn
+    DependsOn:
+      - SampleRestApi
+      - ProtectedResource
+      - SampleServiceLambdaFunction
+
+  AVPAPIGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref SampleRestApi
+      StageName: test
+    DependsOn:
+      - ProtectedPostMethod
+
+  AmazonVerifiedPermissionTokenAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: AmazonVerifiedPermissionTokenAuthorizer
+      Type: TOKEN
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref SampleRestApi
+      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AVPAuthorizerLambdaFunction.Arn}/invocations"
+      AuthorizerResultTtlInSeconds: 300
+    DependsOn:
+      - SampleRestApi
+      - AVPAuthorizerLambdaFunction
+      - AVPAuthorizerLambdaExecutionRole
+
+  AVPAuthorizerLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: avp-authorizer
+      Description: This is an example for Amazon Verfied Permissions Token Authorizer
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt AVPAuthorizerLambdaExecutionRole.Arn
+      Code: package/
+      Runtime: python3.9
+      Environment:
+        Variables:
+          TENANT_IDENTITY_URL: !Ref IdentityTenantUrl
+          POLICY_STORE_ID: !Ref policyStoreID
+    DependsOn:
+    - AVPAuthorizerLambdaExecutionRole
+
+  AVPAuthorizerLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: avp-authorizer-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LogLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: AVPLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: verifiedpermissions:IsAuthorized
+            Resource: '*'
+
+  AVPAuthorizerLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - SampleRestApi
+      - AVPAuthorizerLambdaFunction
+    Properties:
+      FunctionName: !Ref AVPAuthorizerLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SampleRestApi}/*/*"
+
+  SampleServiceLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - SampleRestApi
+      - SampleServiceLambdaFunction
+    Properties:
+      FunctionName: !Ref SampleServiceLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SampleRestApi}/*/*"
+      
