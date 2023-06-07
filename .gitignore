@@ -10,3 +10,4 @@ venv.bak/
 package/***
 sdk.zip
 cf-package.yaml
+.vscode/
