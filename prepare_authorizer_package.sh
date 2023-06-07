@@ -14,7 +14,7 @@ mkdir -p package
 cp ./lambda_function.py package
 
 echo installing python pre-requisites
-pip install -q python-jose requests==2.29.0 --target package
+pip install -q python-jose requests==2.29.0 requests-oauth2client --target package
 # temporary copy last boto3 version that supports Amazon Verified Permissions
 # this will be deleted when boto3 will support Amazon Verified Permissions
 
