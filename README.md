@@ -1,0 +1,1 @@
+# identity-aws-verified-permissions-demo
