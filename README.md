@@ -6,7 +6,7 @@ This is a demo project to present Amazon API Gateway access control based on Ama
 
 The demo uses CyberArk access token and performs the authorization using the Amazon Verified Permissions service.
 
-[Check our open source projects](https://github.com/cyberark/)
+Check our open source projects: [https://github.com/cyberark/](https://github.com/cyberark/)
 
 ![Amazon Verified Permissions](architecture.png "Flow and Architecture of the lambda authorizer")
 
