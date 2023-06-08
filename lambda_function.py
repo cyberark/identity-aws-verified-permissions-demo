@@ -6,11 +6,10 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Dict, List
 
+import boto3
 import requests
 from jose import jwk, jwt
 from jose.utils import base64url_decode
-
-import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -40,6 +39,7 @@ def lambda_handler(event, context) -> Dict:
     token = event['authorizationToken'].replace('Bearer', '').strip()
 
     verify_oidc_token_signature(tenant_url=TENANT_URL, token=token)
+
     claims = jwt.get_unverified_claims(token)
 
     # Extract token information
@@ -47,7 +47,7 @@ def lambda_handler(event, context) -> Dict:
     logger.info(f'principal: {user_id}')
 
     method_arn = event['methodArn']
-    apiGatewayMethod = method_arn.split(':')[5].split('/')
+    api_gateway_method = method_arn.split(':')[5].split('/')
     logger.info(f'method_arn: {method_arn}')
 
     # Get User attributes
@@ -55,21 +55,21 @@ def lambda_handler(event, context) -> Dict:
     logger.info(f'user attributes:{user_attributes}')
 
     # Calculating the action as a concatenation of the rest method and resource name
-    method = apiGatewayMethod[2]
-    resource = apiGatewayMethod[-1]
+    method = api_gateway_method[2]
+    resource = api_gateway_method[-1]
 
     # Call Amazon Verified Permissions to authorize. The return value is Allow / Deny and can be assigned to the IAM Policy
     effect = check_authorization(principal_id=claims['sub'], action=method, resource=resource, claims=claims,
                                  user_attributes=user_attributes)
 
     # Build the output
-    policy_response = generate_iam_policy(principalId=user_id, effect=effect, resource=method_arn)
+    policy_response = generate_iam_policy(principal_id=user_id, effect=effect, resource=method_arn)
     logger.info(f'response: {policy_response}')
 
     return policy_response
 
 
-def generate_iam_policy(principalId: str, effect: str, resource: str) -> Dict:
+def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
     """
     This method generates the IAM policy to allow / deny access to the Amazon API Gateway resource
     Parameters
@@ -80,7 +80,7 @@ def generate_iam_policy(principalId: str, effect: str, resource: str) -> Dict:
     :return: Dictionary containing the IAM policy
     """
     policy = {
-        'principalId': principalId,
+        'principalId': principal_id,
         'policyDocument': {
             'Version': '2012-10-17',
             'Statement': [{
@@ -107,6 +107,7 @@ def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
         user_attributes = json.loads(response.text)['Result']
         logger.info(user_attributes)
         return user_attributes
+    return None
 
 
 def _get_identity_tanant_public_key(token: str, identity_public_key_url: str) -> jwk.Key:
@@ -170,7 +171,7 @@ def _get_data_entities(token_claims: Dict, user_attributes: Dict = None) -> List
     if user_attributes:
         user_attributes_dict = {}
         for attribute in user_attributes:
-            user_attributes_dict[attribute] = {"String": user_attributes[attribute]}
+            user_attributes_dict[attribute] = {'String': user_attributes[attribute]}
         user_entity['Attributes'] = user_attributes_dict
 
     for role in token_claims['user_roles']:
