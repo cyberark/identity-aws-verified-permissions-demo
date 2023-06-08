@@ -54,9 +54,8 @@ To invoke the script run:
 
 ```bash
 python access-demo-resource.py -u <username> -i <identity url> -g <resource url>
-..
-
 ```
+Enter your password on this propmt "Enter your password: " and the script will invoke a login and API Gateway Call. 
 
 ### Comments
 
