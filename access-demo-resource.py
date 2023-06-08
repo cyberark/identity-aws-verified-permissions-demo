@@ -3,6 +3,7 @@ import argparse
 import json
 from getpass import getpass
 from http import HTTPStatus
+from pprint import pprint
 from typing import Dict
 
 import requests
@@ -28,10 +29,10 @@ def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> D
 def identity_login(identity_url: str, username: str, password: str) -> str:
     try:
         oauth2client = OAuth2Client(
-            token_endpoint=f'{identity_url}/oauth2/platformtoken',
+            token_endpoint=f"{identity_url}/oauth2/platformtoken",
             auth=(username, password),
         )
-        token = oauth2client.client_credentials(scope='', resource='')
+        token = oauth2client.client_credentials(scope="", resource="")
         return str(token)
     except (Exception) as ex:
         print(ex)
@@ -48,34 +49,35 @@ def main():
 
     # login with username and password and get token
     token = identity_login(username=args.user, password=password, identity_url=args.identity_url)
-    print(f'user token: {token}')
+    print(f'User token: {token}')
 
     # get user id from claims
     claims = jwt.get_unverified_claims(token)
 
     user_id = claims['sub']
-    print(f'user id: {user_id}')
-    print(f'user claims are: {claims}')
+    print (f'User id: {user_id}')
+    print ('User token claims:')
+    pprint(claims)
 
     # get user attributes
     attributes = get_identity_user_attributes(tenant_url=args.identity_url, token=token, user_id=user_id)
     print(f'user attributes: {attributes}')
 
     # call api gateway resource, protected by token authorizer and Amazon Verified Permissions as the decision service
-    print('invoking the resource rest endpoint...')
+    print('Invoking the resource rest endpoint...')
     url = f'{args.gw_url}/protected-resource'
     headers = {'Authorization': f'Bearer {token}'}
     response = requests.api.post(url, json={}, headers=headers, timeout=30)
 
     # verifying and analyzing the result
     if response.status_code == HTTPStatus.OK:
-        print('you are authorized')
+        print('You are authorized')
     elif response.status_code == HTTPStatus.FORBIDDEN:
-        print('you are not authorized')
+        print('You are not authorized')
     else:
-        print(f'unexpected error occurred: {response.status_code}')
+        print(f'Unexpected error occurred: {response.status_code}')
 
-    print(f'api response is\n{response.text}\n')
+    print(f'API response: {response.text}')
 
 
 if __name__ == '__main__':
