@@ -16,8 +16,6 @@ cp ./lambda_function.py package
 echo installing python pre-requisites
 pip install -r requirements.txt --target package
 
-echo unzip packages
-unzip -qq -o boto.zip -d package
 export BUCKET_NAME=$1
 aws cloudformation package --template avp-authorizer-cf-template.yaml \
  --s3-bucket $BUCKET_NAME --output-template-file cf-package.yaml
