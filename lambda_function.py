@@ -111,7 +111,7 @@ def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
 
 def _get_identity_tanant_public_key(token: str, identity_public_key_url: str) -> jwk.Key:
 
-    logger.info(f' request to get token publick key via: {identity_public_key_url}')
+    logger.info(f'request to get token publick key via: {identity_public_key_url}')
     response = requests.get(url=identity_public_key_url, headers={'Authorization': f'Bearer {token}'},
                             timeout=60)  # it is advised to cache the key results
     logger.info(f'response status is: {response.status_code}')

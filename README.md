@@ -70,3 +70,8 @@ These are the common steps to troubleshoot:
 3. Check that the logs contain the inputs to the Lambda authorizer as the authorization header and method ARN.
 4. Check the result of the Lambda authorizer that you get an `Allow` decision from Amazon Verified Permissions
 5. Check that the authorization token is in the correct format. You can use [jwt.io](https://jwt.io/) to decode it online.
+
+
+# License
+
+Thhese code examples are licensed under the Apache License 2.0 - see [`LICENSE`](LICENSE.md) for more details.
