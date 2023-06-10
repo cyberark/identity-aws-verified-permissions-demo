@@ -182,9 +182,9 @@ def check_authorization(principal_id: str, action: str, resource: str, claims: D
     principal = Identifier(entityType='User', entityId=principal_id)
     action = {'actionType': 'Action', 'actionId': action}
     resource = Identifier(entityType='Resource', entityId=resource)
-    entities = {'entities': _get_data_entities(token_claims=claims, user_attributes=user_attributes)}
+    entities = {'entityList': _get_data_entities(token_claims=claims, user_attributes=user_attributes)}
     context = {
-        'context': {
+        'contextMap': {
             'aws_region': {
                 'string': claims['aws_region']
             },
