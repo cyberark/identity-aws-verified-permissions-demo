@@ -10,8 +10,9 @@ fi
 # prepare package to deploy: copy function code and install packages
 echo preparing the package
 
-mkdir -p package
+mkdir -p package/models/verifiedpermissions/2021-12-01
 cp ./lambda_function.py package
+cp ./verifiedpermissions.json package/models/verifiedpermissions/2021-12-01/service-2.json
 
 echo installing python pre-requisites
 pip install -r requirements.txt --target package

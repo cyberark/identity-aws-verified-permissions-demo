@@ -132,6 +132,7 @@ Resources:
         Variables:
           TENANT_IDENTITY_URL: !Ref IdentityTenantUrl
           POLICY_STORE_ID: !Ref policyStoreID
+          AWS_DATA_PATH: ./models
     DependsOn:
     - AVPAuthorizerLambdaExecutionRole
 
