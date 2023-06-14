@@ -113,7 +113,7 @@ Resources:
       IdentitySource: method.request.header.Authorization
       RestApiId: !Ref SampleRestApi
       AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AVPAuthorizerLambdaFunction.Arn}/invocations"
-      AuthorizerResultTtlInSeconds: 300
+      AuthorizerResultTtlInSeconds: 0
     DependsOn:
       - SampleRestApi
       - AVPAuthorizerLambdaFunction
