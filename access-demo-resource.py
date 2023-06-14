@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import json
+import time
 from getpass import getpass
 from http import HTTPStatus
 from pprint import pprint
@@ -9,10 +10,6 @@ from typing import Dict
 import requests
 from jose import jwt
 from requests_oauth2client import OAuth2Client
-
-HTTP_VERY_LONG_TIMEOUT = 300
-identity_headers = {'Content-Type': 'application/json', 'X-IDAP-NATIVE-CLIENT': 'true'}
-
 
 def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
     # Get User attributes
@@ -25,18 +22,21 @@ def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> D
         return user_attributes
     return None
 
-
 def identity_login(identity_url: str, username: str, password: str) -> str:
-    try:
-        oauth2client = OAuth2Client(
-            token_endpoint=f"{identity_url}/oauth2/platformtoken",
-            auth=(username, password),
-        )
-        token = oauth2client.client_credentials(scope="", resource="")
-        return str(token)
-    except (Exception) as ex:
-        print(ex)
-
+    retries = 0
+    while retries < 3:
+        try:
+            print('identity url:', identity_url)
+            oauth2client = OAuth2Client(
+                token_endpoint=f'{identity_url}/oauth2/platformtoken',
+                auth=(username, password),
+                timeout = 10
+            )
+            token = oauth2client.client_credentials(scope="", resource="")
+            return str(token)
+        except (Exception) as ex:
+            time.sleep(2)
+            retries +=1
 
 def main():
     parser = argparse.ArgumentParser()
@@ -65,10 +65,16 @@ def main():
 
     # call api gateway resource, protected by token authorizer and Amazon Verified Permissions as the decision service
     print('Invoking the resource rest endpoint...')
-    url = f'{args.gw_url}/protected-resource'
-    headers = {'Authorization': f'Bearer {token}'}
-    response = requests.api.post(url, json={}, headers=headers, timeout=30)
 
+    # these fixed value were predefined in the cloud formation template
+    stage_name = 'test'
+    resource_name = 'protected-resource'
+
+    # building the resource url from
+    resource_url = f'{args.gw_url}/{stage_name}/{resource_name}'
+    headers = {'Authorization': f'Bearer {token}'}
+    response = requests.api.post(resource_url, json={}, headers=headers, timeout=30)
+    print ('response code:', response.status_code)
     # verifying and analyzing the result
     if response.status_code == HTTPStatus.OK:
         print('You are authorized')
