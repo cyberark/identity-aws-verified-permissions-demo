@@ -1,3 +1,5 @@
 requests==2.29.0
 requests-oauth2client
 python-jose
+boto3
+botocore

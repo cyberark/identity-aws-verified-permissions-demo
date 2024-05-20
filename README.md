@@ -29,7 +29,6 @@ To create the API Gateway with the token authorizer code and a resource use the 
 ```
 
 For example:
-
 ```bash
 ./prepare_authorizer_package.sh avp-demo-bucket ps-1234-5678 https://xxxx.id.integration-cyberark.cloud/ us-east-1
 ```
