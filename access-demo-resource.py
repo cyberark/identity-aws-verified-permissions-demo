@@ -11,8 +11,7 @@ import requests
 from jose import jwt
 from requests_oauth2client import OAuth2Client
 
-from utils.utils import identity_login, get_identity_user_attributes
-
+from utils.utils import get_identity_user_attributes, identity_login
 
 # def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
 #     # Get User attributes
@@ -24,7 +23,6 @@ from utils.utils import identity_login, get_identity_user_attributes
 #         user_attributes = json.loads(response.text)['Result']
 #         return user_attributes
 #     return None
-
 
 # def identity_login(identity_url: str, username: str, password: str) -> str:
 #     retries = 0
@@ -45,14 +43,25 @@ from utils.utils import identity_login, get_identity_user_attributes
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-g', '--gw_url', required=True, help='API Gateway URL')
-    parser.add_argument('-u', '--user', required=True, help='Username to login to the resource rest endpoint')
-    parser.add_argument('-i', '--identity_url', required=True, help='Identity URL to login')
+    parser.add_argument('-g',
+                        '--gw_url',
+                        required=True,
+                        help='API Gateway URL')
+    parser.add_argument('-u',
+                        '--user',
+                        required=True,
+                        help='Username to login to the resource rest endpoint')
+    parser.add_argument('-i',
+                        '--identity_url',
+                        required=True,
+                        help='Identity URL to login')
     args = parser.parse_args()
     password = getpass("Enter user password: ")
 
     # login with username and password and get token
-    token = identity_login(username=args.user, password=password, identity_url=args.identity_url)
+    token = identity_login(username=args.user,
+                           password=password,
+                           identity_url=args.identity_url)
     print(f'User token: {token}')
 
     # get user id from claims
@@ -64,7 +73,9 @@ def main():
     pprint(claims)
 
     # get user attributes
-    attributes = get_identity_user_attributes(tenant_url=args.identity_url, token=token, user_id=user_id)
+    attributes = get_identity_user_attributes(tenant_url=args.identity_url,
+                                              token=token,
+                                              user_id=user_id)
     print(f'user attributes: {attributes}')
 
     # call api gateway resource, protected by token authorizer and Amazon Verified Permissions as the decision service
@@ -77,7 +88,10 @@ def main():
     # building the resource url from
     resource_url = f'{args.gw_url}/{stage_name}/{resource_name}'
     headers = {'Authorization': f'Bearer {token}'}
-    response = requests.api.post(resource_url, json={}, headers=headers, timeout=30)
+    response = requests.api.post(resource_url,
+                                 json={},
+                                 headers=headers,
+                                 timeout=30)
     print('response code:', response.status_code)
     # verifying and analyzing the result
     if response.status_code == HTTPStatus.OK:

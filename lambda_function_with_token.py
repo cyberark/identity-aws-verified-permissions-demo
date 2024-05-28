@@ -1,12 +1,11 @@
 import logging
-import logging
 import os
 from typing import Dict
 
 import boto3
 from jose import jwt
 
-from utils.utils import check_authorization_with_token, _get_user_attributes
+from utils.utils import _get_user_attributes, check_authorization_with_token
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -14,6 +13,7 @@ logger.setLevel(logging.INFO)
 TENANT_URL = os.environ.get('TENANT_IDENTITY_URL')
 POLICY_STORE_ID = os.environ.get('POLICY_STORE_ID')
 avp_client = boto3.client('verifiedpermissions')
+
 
 def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
     """
@@ -28,7 +28,8 @@ def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
     policy = {
         'principalId': principal_id,
         'policyDocument': {
-            'Version': '2012-10-17',
+            'Version':
+            '2012-10-17',
             'Statement': [{
                 'Action': 'execute-api:Invoke',
                 'Effect': effect,
@@ -63,7 +64,9 @@ def lambda_handler(event, context) -> Dict:
     user_id = claims['sub']
     logger.info(f'principal: {user_id}')
 
-    user_attributes = _get_user_attributes(tenant_url=TENANT_URL, token=token, user_id=user_id)
+    user_attributes = _get_user_attributes(tenant_url=TENANT_URL,
+                                           token=token,
+                                           user_id=user_id)
     logger.info(f'user attributes:{user_attributes}')
 
     # Get API Method
@@ -76,17 +79,16 @@ def lambda_handler(event, context) -> Dict:
     resource = api_gateway_method[-1]
 
     # Call Amazon Verified Permissions to authorize. The return value is Allow / Deny and can be assigned to the IAM Policy
-    effect = check_authorization_with_token(
-        policy_store_id=POLICY_STORE_ID,
-        oidc_token=token,
-        action=method,
-        resource_id=resource,
-        user_attributes=user_attributes
-    )
+    effect = check_authorization_with_token(policy_store_id=POLICY_STORE_ID,
+                                            oidc_token=token,
+                                            action=method,
+                                            resource_id=resource,
+                                            user_attributes=user_attributes)
 
     # Build the output
-    policy_response = generate_iam_policy(principal_id=user_id, effect=effect, resource=method_arn)
+    policy_response = generate_iam_policy(principal_id=user_id,
+                                          effect=effect,
+                                          resource=method_arn)
     logger.info(f'response: {policy_response}')
 
     return policy_response
-

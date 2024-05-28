@@ -4,7 +4,8 @@ from typing import Dict
 
 from jose import jwt
 
-from utils.utils import _get_user_attributes, verify_oidc_token_signature, check_authorization
+from utils.utils import (_get_user_attributes, check_authorization,
+                         verify_oidc_token_signature)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -55,7 +56,9 @@ def lambda_handler(event, context) -> Dict:
                                  token=token)
 
     # Build the output
-    policy_response = generate_iam_policy(principal_id=user_id, effect=effect, resource=method_arn)
+    policy_response = generate_iam_policy(principal_id=user_id,
+                                          effect=effect,
+                                          resource=method_arn)
     logger.info(f'response: {policy_response}')
 
     return policy_response
@@ -74,7 +77,8 @@ def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
     policy = {
         'principalId': principal_id,
         'policyDocument': {
-            'Version': '2012-10-17',
+            'Version':
+            '2012-10-17',
             'Statement': [{
                 'Action': 'execute-api:Invoke',
                 'Effect': effect,
@@ -101,7 +105,6 @@ def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
 #         return user_attributes
 #     return None
 
-
 # def _get_identity_tanant_public_key(token: str, identity_public_key_url: str) -> jwk.Key:
 #     logger.info(f'request to get token public key via: {identity_public_key_url}')
 #     response = requests.get(url=identity_public_key_url, headers={'Authorization': f'Bearer {token}'},
@@ -116,7 +119,6 @@ def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
 #     key = response_dict['keys'][0]
 #
 #     return jwk.construct(key)
-
 
 # def verify_oidc_token_signature(tenant_url: str, token: str) -> bool:
 #     """
@@ -143,12 +145,10 @@ def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
 #
 #     return True
 
-
 # @dataclass
 # class Identifier:
 #     entityId: str
 #     entityType: str
-
 
 # def _get_data_entities(token_claims: Dict, user_attributes: Dict = None) -> List:
 #     data_entities: List[Dict] = []
@@ -168,7 +168,6 @@ def generate_iam_policy(principal_id: str, effect: str, resource: str) -> Dict:
 #         user_entity['parents'].append(asdict(Identifier(entityType='UserGroup', entityId=role)))
 #     data_entities.append(user_entity)
 #     return data_entities
-
 
 # def check_authorization(principal_id: str, action: str, resource: str, claims: Dict, user_attributes: Dict) -> str:
 #     principal = Identifier(entityType='User', entityId=principal_id)

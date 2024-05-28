@@ -46,16 +46,17 @@ The cloud formation will create an API Gateway with a token authorizer and a sam
 The outputs are the following:
 - An AWS API Gateway with a token authorizer.
   The API Gateway name is 'Sample API Gateway'
-- A resource called 'protected-resource' with POST method. 
+- A resource called **'protected-resource'** with POST method. 
   - To access to that resource, you need to provide a valid token. 
   - The token is validated using the Lambda authorizer. 
     The lambda authorizer extracts the principal from the token claims
+  - The name of the custom authorizer is 'AmazonVerifiedPermissionAuthorizer' and calls the lambda function called 'avp-lambda-authorizer'
     retrieves additional user attributes from CyberArk Identity
   - The AWS Lambda authorizer invokes the Amazon Verified Permissions service to authorize the request.
   - The authorization is done using is_authorized() function in the lambda authorizer.
-- A resource called 'protected-resource-token'
+- A resource called **'protected-resource-token'**
   - This resource is protected by a new AWS Lambda Custom Authorizer that uses the token as the principal.
-  - The name of the custom  
+  - The name of the custom authorizer is 'AmazonVerifiedPermissionTokenAuthorizer' and calls the lambda function called 'avp-lambda-authorizer-with-token'
   - The lambda function calls the Amazon Verified Permissions service to authorize the 
   - request with is_authorized_with_token() function.
   - The policy store, is set to have an Identity Source configuration, set to trust CyberArk Identity as the IdP.
