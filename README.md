@@ -25,12 +25,12 @@ Checkout our open source projects: [https://github.com/cyberark/](https://github
 To create the API Gateway with the token authorizer code and a resource use the following command:
 
 ```bash
-./prepare_authorizer_package.sh <s3 bucket name> <verified permissions policy store id> <cyberark identity url> <region>
+./prepare_authorizer_package.sh <s3 bucket name> <cyberark identity url> <region>
 ```
 
 For example:
 ```bash
-./prepare_authorizer_package.sh avp-demo-bucket ps-1234-5678 https://xxxx.id.integration-cyberark.cloud/ us-east-1
+./prepare_authorizer_package.sh avp-demo-bucket https://xxxx.id.integration-cyberark.cloud/ us-east-1
 ```
 
 ### AWS Lambda Authorizer token authorizer performs
@@ -40,6 +40,28 @@ For example:
 - Formalize the token claims to Amazon Verified Permissions format
 - Invokes an authorization check using Amazon Verified Permissions and gets the decision
 - Converts the decision to an IAM Policy format and returns it (to the API Gateway)
+
+### Script outputs
+The cloud formation will create an API Gateway with a token authorizer and a sample resource. 
+The outputs are the following:
+- An AWS API Gateway with a token authorizer.
+  The API Gateway name is 'Sample API Gateway'
+- A resource called 'protected-resource' with POST method. 
+  - To access to that resource, you need to provide a valid token. 
+  - The token is validated using the Lambda authorizer. 
+    The lambda authorizer extracts the principal from the token claims
+    retrieves additional user attributes from CyberArk Identity
+  - The AWS Lambda authorizer invokes the Amazon Verified Permissions service to authorize the request.
+  - The authorization is done using is_authorized() function in the lambda authorizer.
+- A resource called 'protected-resource-token'
+  - This resource is protected by a new AWS Lambda Custom Authorizer that uses the token as the principal.
+  - The name of the custom  
+  - The lambda function calls the Amazon Verified Permissions service to authorize the 
+  - request with is_authorized_with_token() function.
+  - The policy store, is set to have an Identity Source configuration, set to trust CyberArk Identity as the IdP.
+
+```bash
+
 
 ## Testing the setup
 
@@ -54,11 +76,12 @@ To invoke the script run:
 ```bash
 python access-demo-resource.py -u <username> -i <identity url> -g <resource url>
 ```
-Enter your password on this propmt "Enter your password: " and the script will invoke a login and API Gateway Call. 
+Enter your password on this prompt "Enter your password: " and the script will invoke a login and API Gateway Call. 
+
 
 ### Comments
 
-1. the user name should be in this pattern: `user_name@cyberark_identity_domain`. For example, `my_user@trialdomain`.
+1. the username should be in this pattern: `user_name@cyberark_identity_domain`. For example, `my_user@trialdomain`.
 2. You can change the user attributes. For example, use different `user_dept` value.
 
 In case you are authorized, the result message is `Hello from Lambda!`. Otherwise, you get `User is not authorized to access this resource with an explicit deny`.
@@ -75,4 +98,4 @@ These are the common steps to troubleshoot:
 
 # License
 
-Theese code examples are licensed under the Apache License 2.0 - see [`LICENSE`](LICENSE.md) for more details.
+These code examples are licensed under the Apache License 2.0 - see [`LICENSE`](LICENSE.md) for more details.

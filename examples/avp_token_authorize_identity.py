@@ -4,7 +4,8 @@ from getpass import getpass
 from pprint import pprint
 
 from jose import jwt
-from utils.utils import identity_login, check_authorization, check_authorization_with_token
+from utils.utils import identity_login, check_authorization, check_authorization_with_token, _get_user_attributes, logger
+
 
 def main():
 
@@ -32,12 +33,15 @@ def main():
     try:
 
         policy_store_id = args.policy_store_id
-        action = "read"
+        action = "POST"
 
         print(f'Checking authorization (with principal) on user {user_id} for action {action} @policy store {policy_store_id}')
-        decision = check_authorization(policy_store_id=policy_store_id,
+        decision = check_authorization( policy_store_id=policy_store_id,
                                         principal_id = user_id,
-                                        action = action)
+                                        action = action,
+                                        resource_id='protected-resource',
+                                        token=token)
+
         print (f'Authorization decision: {decision}')
 
 

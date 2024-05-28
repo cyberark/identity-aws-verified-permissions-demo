@@ -166,7 +166,7 @@ Resources:
       Description: This is an example for Amazon Verfied Permissions Custom Authorizer
       Handler: lambda_function.lambda_handler
       Role: !GetAtt AVPAuthorizerLambdaExecutionRole.Arn
-      Code: package/
+      Code: temp_dir/
       Runtime: python3.9
       Environment:
         Variables:
@@ -183,7 +183,7 @@ Resources:
       Description: This is an example for Amazon Verfied Permissions Custom Authorizer based on a token
       Handler: lambda_function_with_token.lambda_handler
       Role: !GetAtt AVPAuthorizerLambdaExecutionRole.Arn
-      Code: package/
+      Code: temp_dir/
       Runtime: python3.9
       Environment:
         Variables:
@@ -250,12 +250,27 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SampleRestApi}/*/*"
 
+
+#  Create an
+
   SampleAVPPolicyStore:
     Type: AWS::VerifiedPermissions::PolicyStore
     Properties:
-      Description: "Example policy store for the AVP policy"
+      Description: "Example policy store to manage cedar policies"
       ValidationSettings:
         Mode: "OFF"
+
+  SampleIdentitySource:
+    Type: AWS::VerifiedPermissions::IdentitySource
+    Properties:
+      Description: "Example identity source to be able to perform authorization based on OIDC tokens"
+      Configuration:
+          CognitoUserPoolConfiguration:
+            UserPoolArn: arn:aws:cognito-idp:us-east-1:450676674096:userpool/us-east-1_GvwMVObxv
+            ClientIds:
+              - 28bfvqhtanq71gln367k4e29bq
+      PolicyStoreId: !Ref SampleAVPPolicyStore
+      PrincipalEntityType: "User"
 
   SampleAVPPolicy:
     Type: AWS::VerifiedPermissions::Policy

@@ -80,7 +80,7 @@ def lambda_handler(event, context) -> Dict:
         policy_store_id=POLICY_STORE_ID,
         oidc_token=token,
         action=method,
-        resource=resource,
+        resource_id=resource,
         user_attributes=user_attributes
     )
 

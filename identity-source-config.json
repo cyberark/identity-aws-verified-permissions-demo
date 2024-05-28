@@ -1,0 +1,18 @@
+{
+  "openIdConnectConfiguration": {
+    "issuer": "https://auth.example.com",
+    "tokenSelection": {
+      "identityTokenOnly": {
+        "clientIds": [
+          "1example23456789"
+        ],
+        "principalIdClaim": "sub"
+      }
+    },
+    "entityIdPrefix": "MyOIDCProvider",
+    "groupConfiguration": {
+      "groupClaim": "groups",
+      "groupEntityType": "MyCorp::UserGroup"
+    }
+  }
+}

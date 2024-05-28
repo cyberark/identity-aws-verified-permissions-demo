@@ -1,24 +1,16 @@
-import json
 import logging
 import os
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
-from http import HTTPStatus
-from typing import Dict, List
+from typing import Dict
 
-import boto3
-import requests
-from jose import jwk, jwt
-from jose.utils import base64url_decode
+from jose import jwt
 
-from utils.utils import _get_user_attributes, _get_identity_tenant_public_key, verify_oidc_token_signature, check_authorization
+from utils.utils import _get_user_attributes, verify_oidc_token_signature, check_authorization
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 TENANT_URL = os.environ.get('TENANT_IDENTITY_URL')
 POLICY_STORE_ID = os.environ.get('POLICY_STORE_ID')
-avp_client = boto3.client('verifiedpermissions')
 
 
 def lambda_handler(event, context) -> Dict:
@@ -51,20 +43,16 @@ def lambda_handler(event, context) -> Dict:
     api_gateway_method = method_arn.split(':')[5].split('/')
     logger.info(f'method_arn: {method_arn}')
 
-    # Get User attributes
-    user_attributes = _get_user_attributes(tenant_url=TENANT_URL, token=token, user_id=user_id)
-    logger.info(f'user attributes:{user_attributes}')
-
     # Calculating the action as a concatenation of the rest method and resource name
     method = api_gateway_method[2]
     resource = api_gateway_method[-1]
 
     # Call Amazon Verified Permissions to authorize. The return value is Allow / Deny and can be assigned to the IAM Policy
-    effect = check_authorization(principal_id=claims['sub'],
+    effect = check_authorization(policy_store_id=POLICY_STORE_ID,
+                                 principal_id=claims['sub'],
                                  action=method,
-                                 resource=resource,
-                                 claims=claims,
-                                 user_attributes=user_attributes)
+                                 resource_id=resource,
+                                 token=token)
 
     # Build the output
     policy_response = generate_iam_policy(principal_id=user_id, effect=effect, resource=method_arn)
