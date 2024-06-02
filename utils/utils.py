@@ -1,18 +1,17 @@
 import json
 import logging
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Dict, List
 
 import boto3
 import requests
+from jose import jwk, jwt
+from jose.utils import base64url_decode
 from requests.auth import HTTPBasicAuth
 from requests_oauth2client import OAuth2Client
-
-from jose import jwt, jwk
-from jose.utils import base64url_decode
 from retry import retry
 
 logger = logging.getLogger()
@@ -25,84 +24,93 @@ class Identifier:
     entityType: str
 
 
-def cognito_login(user_name: str, password: str, client_id: str, region: str) -> Dict:
+def cognito_login(user_name: str, password: str, client_id: str,
+                  region: str) -> Dict:
     client = boto3.client('cognito-idp', region)
-    response = client.initiate_auth(
-        AuthFlow='USER_PASSWORD_AUTH',
-        AuthParameters={
-            'USERNAME': user_name,
-            'PASSWORD': password
-        },
-        ClientId=client_id
-    )
+    response = client.initiate_auth(AuthFlow='USER_PASSWORD_AUTH',
+                                    AuthParameters={
+                                        'USERNAME': user_name,
+                                        'PASSWORD': password
+                                    },
+                                    ClientId=client_id)
     return response
+
 
 @retry(tries=3, delay=2)
 def identity_login(identity_url: str, username: str, password: str) -> str:
     try:
         auth_headers = HTTPBasicAuth(username, password)
 
-        body = {'grant_type': 'client_credentials', 'scope':  'avp1'}
-        auth_url = f'{identity_url}/oauth2/token/CyberArk'
-
-        body = {'grant_type': 'token', 'scope':  'avp1'}
-        auth_url = f'{identity_url}/oauth2/token/AVP1'
-
-        # body = {'grant_type': 'client_credentials', 'scope': 'api'}
-        # auth_url = f'{identity_url}/oauth2/token/__idaptive_cybr_user_oidc'
-
-        # "https://aaj7496.my.dev.idaptive.app/__idaptive_cybr_user_oidc/.well-known/openid-configuration"
-
-        auth_res = requests.post(auth_url, auth=auth_headers, verify=True, data=body, timeout=120)
-
-        token = json.loads(auth_res.content)['access_token']
-        claims = jwt.get_unverified_claims(token)
-        print(f'User token claims: {claims}')
-
-        return token
+        print('identity url:', identity_url)
+        oauth2client = OAuth2Client(
+            token_endpoint=f'{identity_url}/oauth2/platformtoken',
+            auth=(username, password),
+            timeout=10)
+        token = oauth2client.client_credentials(scope="", resource="")
+        return str(token)
     except (Exception) as ex:
         print(ex.error)
         if "access_denied" in ex.error:
             raise Exception("Access Denied")
 
 
-def _get_data_entities(token_claims: Dict, user_attributes: Dict = None) -> List:
+def _get_data_entities(token_claims: Dict,
+                       user_attributes: Dict = None) -> List:
     data_entities: List[Dict] = []
     # add roles from token
     for role in token_claims['user_roles']:
-        data_entities.append({'identifier': asdict(Identifier(entityType='UserGroup', entityId=role))})
+        data_entities.append({
+            'identifier':
+            asdict(Identifier(entityType='UserGroup', entityId=role))
+        })
 
     # add user and role parents
-    user_entity = {'identifier': asdict(Identifier(entityType='User', entityId=token_claims['sub'])), 'parents': []}
+    user_entity = {
+        'identifier':
+        asdict(Identifier(entityType='User', entityId=token_claims['sub'])),
+        'parents': []
+    }
     if user_attributes:
         user_attributes_dict = {}
         for attribute in user_attributes:
-            user_attributes_dict[attribute] = {'string': user_attributes[attribute]}
+            user_attributes_dict[attribute] = {
+                'string': user_attributes[attribute]
+            }
         user_entity['attributes'] = user_attributes_dict
 
     for role in token_claims['user_roles']:
-        user_entity['parents'].append(asdict(Identifier(entityType='UserGroup', entityId=role)))
+        user_entity['parents'].append(
+            asdict(Identifier(entityType='UserGroup', entityId=role)))
     data_entities.append(user_entity)
     return data_entities
 
+
 @retry(tries=3, delay=2)
-def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
+def get_identity_user_attributes(tenant_url: str, token: str,
+                                 user_id: str) -> Dict:
     # Get User attributes
     payload = {'Table': 'users', 'ID': user_id}
-    headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    }
     if tenant_url.endswith("/"):
         url = f'{tenant_url}ExtData/GetColumns'
     else:
         url = f'{tenant_url}/ExtData/GetColumns'
 
-    response = requests.request(method='POST', url=url, json=payload, headers=headers, timeout=30)
+    response = requests.request(method='POST',
+                                url=url,
+                                json=payload,
+                                headers=headers,
+                                timeout=30)
     if response.status_code == HTTPStatus.OK:
         user_attributes = json.loads(response.text)['Result']
         return user_attributes
     return None
 
 
-def _get_avp_client(region:str = 'us-east-1'):
+def _get_avp_client(region: str = 'us-east-1'):
     # Create a client for the verifiedpermissions service
     client = boto3.client('verifiedpermissions', region_name=region)
     return client
@@ -111,19 +119,26 @@ def _get_avp_client(region:str = 'us-east-1'):
 def _get_avp_common_kwargs(policy_store_id: str,
                            action: str,
                            resource_id: str = "",
-                           user_attributes: Dict = None)  -> Dict:
+                           user_attributes: Dict = None) -> Dict:
     kwargs = {
         'policyStoreId': policy_store_id,
-        'action': {'actionType': 'NAMESPACE::Action', 'actionId': action},
+        'action': {
+            'actionType': 'NAMESPACE::Action',
+            'actionId': action
+        },
     }
 
     if resource_id and len(resource_id) > 0:
-        kwargs['resource'] = asdict(Identifier(entityType='Resource', entityId=resource_id))
+        kwargs['resource'] = asdict(
+            Identifier(entityType='Resource', entityId=resource_id))
 
     if user_attributes and len(user_attributes) > 0:
-        entities = {'entityList': _get_data_entities(token_claims=claims, user_attributes=user_attributes)}
+        entities = {
+            'entityList':
+            _get_data_entities(token_claims=claims,
+                               user_attributes=user_attributes)
+        }
         kwargs['entities'] = entities
-
 
     logger.info(f"AVP kwargs: {kwargs}")
 
@@ -144,7 +159,9 @@ def check_authorization(policy_store_id: str,
     user_id = claims['sub']
     logger.info(f'principal: {user_id}')
 
-    user_attributes = _get_user_attributes(tenant_url=tenant_url, token=token, user_id=user_id)
+    user_attributes = _get_user_attributes(tenant_url=tenant_url,
+                                           token=token,
+                                           user_id=user_id)
     logger.info(f'user attributes:{user_attributes}')
 
     logger.info(f"""authorization request args\n
@@ -156,14 +173,14 @@ def check_authorization(policy_store_id: str,
                     user_attributes: {user_attributes}\n
                     """)
 
-
     kwargs = _get_avp_common_kwargs(policy_store_id=policy_store_id,
                                     action=action,
                                     resource_id=resource_id,
                                     user_attributes=user_attributes,
                                     claims=claims)
     if principal_id:
-        kwargs['principal'] = asdict(Identifier(entityType='User', entityId=principal_id))
+        kwargs['principal'] = asdict(
+            Identifier(entityType='User', entityId=principal_id))
 
     # add entities and context
     authz_response = _get_avp_client(region=region).is_authorized(**kwargs)
@@ -196,7 +213,7 @@ def _get_context_map(claims: Dict) -> Dict:
 def check_authorization_with_token(policy_store_id: str,
                                    region: str,
                                    id_token: str = None,
-                                   access_token: str =  None,
+                                   access_token: str = None,
                                    action: str = None,
                                    resource_id: str = None,
                                    user_attributes: Dict = None) -> str:
@@ -216,7 +233,8 @@ def check_authorization_with_token(policy_store_id: str,
     if claims and len(claims) > 0:
         kwargs['context'] = _get_context_map(claims)
 
-    authz_response = _get_avp_client(region=region).is_authorized_with_token(**kwargs)
+    authz_response = _get_avp_client(region=region).is_authorized_with_token(
+        **kwargs)
 
     return authz_response['decision']
 
@@ -225,7 +243,10 @@ def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
     # Get User attributes
     payload = {'Table': 'users', 'ID': user_id}
     logger.info(f'payload is:{payload}')
-    headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    }
     logger.info(f'headers:{headers}')
     url = ""
     if tenant_url.endswith("/"):
@@ -233,9 +254,15 @@ def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
     else:
         url = f'{tenant_url}/ExtData/GetColumns'
 
-    logger.info(f'before requesting user attributes from :{url}, with payload:{payload} and headers:{headers}')
+    logger.info(
+        f'before requesting user attributes from :{url}, with payload:{payload} and headers:{headers}'
+    )
 
-    response = requests.request(method='POST', url=url, json=payload, headers=headers, timeout=30)
+    response = requests.request(method='POST',
+                                url=url,
+                                json=payload,
+                                headers=headers,
+                                timeout=30)
     logger.info(f'Get user attributes response is:{response}')
     if response.status_code == HTTPStatus.OK:
         user_attributes = json.loads(response.text)['Result']
@@ -245,10 +272,14 @@ def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
     return None
 
 
-def _get_identity_tenant_public_key(token: str, identity_public_key_url: str) -> jwk.Key:
-    logger.info(f'request to get token public key via: {identity_public_key_url}')
-    response = requests.get(url=identity_public_key_url, headers={'Authorization': f'Bearer {token}'},
-                            timeout=60)  # it is advised to cache the key results
+def _get_identity_tenant_public_key(token: str,
+                                    identity_public_key_url: str) -> jwk.Key:
+    logger.info(
+        f'request to get token public key via: {identity_public_key_url}')
+    response = requests.get(
+        url=identity_public_key_url,
+        headers={'Authorization': f'Bearer {token}'},
+        timeout=60)  # it is advised to cache the key results
     logger.info(f'response status is: {response.status_code}')
     if not response.text:
         raise ValueError('identity response is empty')
@@ -278,7 +309,8 @@ def verify_oidc_token_signature(tenant_url: str, token: str) -> bool:
     """
 
     key_url = f'{tenant_url}/OAuth2/Keys/__idaptive_cybr_user_oidc/'
-    public_key = _get_identity_tenant_public_key(token=token, identity_public_key_url=key_url)
+    public_key = _get_identity_tenant_public_key(
+        token=token, identity_public_key_url=key_url)
     message, encoded_sig = token.rsplit('.', maxsplit=1)
     decoded_signature = base64url_decode(encoded_sig.encode('utf-8'))
     if not public_key.verify(message.encode('utf8'), decoded_signature):

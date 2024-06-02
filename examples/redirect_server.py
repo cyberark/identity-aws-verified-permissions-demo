@@ -2,8 +2,10 @@
 # the response as json
 
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
+
 app = Flask(__name__)
+
 
 # this is the redirect url to the local server to print the authorization code
 @app.route('/callback')
@@ -32,8 +34,7 @@ function myFunction() {{
     """
     return html
 
+
 # Run the application
 if __name__ == '__main__':
     app.run()
-
-

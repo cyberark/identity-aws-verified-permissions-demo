@@ -9,17 +9,22 @@ from jose import jwt
 
 from utils.utils import check_authorization_with_token
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument('-i',
-                    '--identity_url',
-                    required=True,
-                    help='Identity URL to login path.e.g "https://<customer_id>.my.dev.idaptive.app/<app_id>>')
+parser.add_argument(
+    '-i',
+    '--identity_url',
+    required=True,
+    help=
+    'Identity URL to login path.e.g "https://<customer_id>.my.dev.idaptive.app/<app_id>>'
+)
 
-parser.add_argument('-a',
-                    '--app_id',
-                    required=True,
-                    help='Identity app_id path.e.g "https://<customer_id>.my.dev.idaptive.app/<app_id>>')
+parser.add_argument(
+    '-a',
+    '--app_id',
+    required=True,
+    help=
+    'Identity app_id path.e.g "https://<customer_id>.my.dev.idaptive.app/<app_id>>'
+)
 
 parser.add_argument('-c',
                     '--client',
@@ -89,7 +94,9 @@ def main():
     # test claim as long
     session_time_long_claim = claims['session_time_long']
     session_time = int(session_time_long_claim)
-    print(f'session time uses as long: {session_time}, bit length: {session_time.bit_length()}')
+    print(
+        f'session time uses as long: {session_time}, bit length: {session_time.bit_length()}'
+    )
 
     region = "us-east-2"
     id_token_policy_store_id = "9iUWGprDm8ab6uBApD6Xjs"
@@ -97,17 +104,19 @@ def main():
     action = "View"
     try:
         print('Authorizing with ID Token...')
-        decision = check_authorization_with_token(region=region,
-                                                  id_token=id_token,
-                                                  policy_store_id=id_token_policy_store_id,
-                                                  action=action)
+        decision = check_authorization_with_token(
+            region=region,
+            id_token=id_token,
+            policy_store_id=id_token_policy_store_id,
+            action=action)
         print(f'Authorization decision: {decision}')
 
         print('Authorizing with Access Token...')
-        decision = check_authorization_with_token(region=region,
-                                                  access_token=id_token,
-                                                  policy_store_id=access_token_policy_store_id,
-                                                  action=action)
+        decision = check_authorization_with_token(
+            region=region,
+            access_token=id_token,
+            policy_store_id=access_token_policy_store_id,
+            action=action)
         print(f'Authorization decision: {decision}')
 
     except Exception as e:
