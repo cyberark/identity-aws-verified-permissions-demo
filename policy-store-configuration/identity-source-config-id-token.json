@@ -1,0 +1,14 @@
+{
+  "openIdConnectConfiguration": {
+    "issuer": "https://aaj7496.my.dev.idaptive.app/AVPCyberArk/",
+    "tokenSelection": {
+      "identityTokenOnly": {
+        "principalIdClaim": "sub"
+      }
+    },
+    "groupConfiguration": {
+      "groupClaim": "roles",
+      "groupEntityType": "NAMESPACE::Role"
+    }
+  }
+}

@@ -1,44 +1,13 @@
 #!/usr/bin/python3
 import argparse
-import json
-import time
 from getpass import getpass
 from http import HTTPStatus
 from pprint import pprint
-from typing import Dict
 
 import requests
 from jose import jwt
-from requests_oauth2client import OAuth2Client
 
 from utils.utils import get_identity_user_attributes, identity_login
-
-# def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
-#     # Get User attributes
-#     payload = {'Table': 'users', 'ID': user_id}
-#     headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
-#     url = f'{tenant_url}ExtData/GetColumns'
-#     response = requests.request(method='POST', url=url, json=payload, headers=headers, timeout=30)
-#     if response.status_code == HTTPStatus.OK:
-#         user_attributes = json.loads(response.text)['Result']
-#         return user_attributes
-#     return None
-
-# def identity_login(identity_url: str, username: str, password: str) -> str:
-#     retries = 0
-#     while retries < 3:
-#         try:
-#             print('identity url:', identity_url)
-#             oauth2client = OAuth2Client(
-#                 token_endpoint=f'{identity_url}/oauth2/platformtoken',
-#                 auth=(username, password),
-#                 timeout=10
-#             )
-#             token = oauth2client.client_credentials(scope="", resource="")
-#             return str(token)
-#         except (Exception) as ex:
-#             time.sleep(2)
-#             retries += 1
 
 
 def main():

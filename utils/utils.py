@@ -8,6 +8,7 @@ from typing import Dict, List
 
 import boto3
 import requests
+from requests.auth import HTTPBasicAuth
 from requests_oauth2client import OAuth2Client
 
 from jose import jwt, jwk
@@ -39,15 +40,28 @@ def cognito_login(user_name: str, password: str, client_id: str, region: str) ->
 @retry(tries=3, delay=2)
 def identity_login(identity_url: str, username: str, password: str) -> str:
     try:
-        print('identity url:', identity_url)
-        oauth2client = OAuth2Client(
-            token_endpoint=f'{identity_url}/oauth2/platformtoken',
-            auth=(username, password),
-            timeout=10
-        )
-        token = oauth2client.client_credentials(scope="", resource="")
-        return str(token)
+        auth_headers = HTTPBasicAuth(username, password)
+
+        body = {'grant_type': 'client_credentials', 'scope':  'avp1'}
+        auth_url = f'{identity_url}/oauth2/token/CyberArk'
+
+        body = {'grant_type': 'token', 'scope':  'avp1'}
+        auth_url = f'{identity_url}/oauth2/token/AVP1'
+
+        # body = {'grant_type': 'client_credentials', 'scope': 'api'}
+        # auth_url = f'{identity_url}/oauth2/token/__idaptive_cybr_user_oidc'
+
+        # "https://aaj7496.my.dev.idaptive.app/__idaptive_cybr_user_oidc/.well-known/openid-configuration"
+
+        auth_res = requests.post(auth_url, auth=auth_headers, verify=True, data=body, timeout=120)
+
+        token = json.loads(auth_res.content)['access_token']
+        claims = jwt.get_unverified_claims(token)
+        print(f'User token claims: {claims}')
+
+        return token
     except (Exception) as ex:
+        print(ex.error)
         if "access_denied" in ex.error:
             raise Exception("Access Denied")
 
@@ -88,20 +102,19 @@ def get_identity_user_attributes(tenant_url: str, token: str, user_id: str) -> D
     return None
 
 
-def _get_avp_client():
+def _get_avp_client(region:str = 'us-east-1'):
     # Create a client for the verifiedpermissions service
-    client = boto3.client('verifiedpermissions')
+    client = boto3.client('verifiedpermissions', region_name=region)
     return client
 
 
 def _get_avp_common_kwargs(policy_store_id: str,
                            action: str,
                            resource_id: str = "",
-                           user_attributes: Dict = None,
-                           claims: Dict = None) -> Dict:
+                           user_attributes: Dict = None)  -> Dict:
     kwargs = {
         'policyStoreId': policy_store_id,
-        'action': {'actionType': 'Action', 'actionId': action},
+        'action': {'actionType': 'NAMESPACE::Action', 'actionId': action},
     }
 
     if resource_id and len(resource_id) > 0:
@@ -111,8 +124,6 @@ def _get_avp_common_kwargs(policy_store_id: str,
         entities = {'entityList': _get_data_entities(token_claims=claims, user_attributes=user_attributes)}
         kwargs['entities'] = entities
 
-    if claims and len(claims) > 0:
-        kwargs['context'] = _get_context_map(claims)
 
     logger.info(f"AVP kwargs: {kwargs}")
 
@@ -122,6 +133,7 @@ def _get_avp_common_kwargs(policy_store_id: str,
 def check_authorization(policy_store_id: str,
                         principal_id: str,
                         action: str,
+                        region: str,
                         resource_id: str = "",
                         token: str = "") -> str:
     """ Check authorization for a given principal, action, resource and user attributes """
@@ -154,7 +166,7 @@ def check_authorization(policy_store_id: str,
         kwargs['principal'] = asdict(Identifier(entityType='User', entityId=principal_id))
 
     # add entities and context
-    authz_response = _get_avp_client().is_authorized(**kwargs)
+    authz_response = _get_avp_client(region=region).is_authorized(**kwargs)
 
     return authz_response['decision']
 
@@ -182,20 +194,29 @@ def _get_context_map(claims: Dict) -> Dict:
 
 
 def check_authorization_with_token(policy_store_id: str,
-                                   oidc_token: str,
+                                   region: str,
+                                   id_token: str = None,
+                                   access_token: str =  None,
                                    action: str = None,
                                    resource_id: str = None,
                                    user_attributes: Dict = None) -> str:
-    claims = jwt.get_unverified_claims(oidc_token)
 
     kwargs = _get_avp_common_kwargs(policy_store_id=policy_store_id,
                                     action=action,
                                     resource_id=resource_id,
-                                    user_attributes=user_attributes,
-                                    claims=claims)
-    kwargs['identityToken'] = oidc_token
+                                    user_attributes=user_attributes)
+    if id_token:
+        kwargs['identityToken'] = id_token
+        claims = jwt.get_unverified_claims(id_token)
 
-    authz_response = _get_avp_client().is_authorized_with_token(**kwargs)
+    elif access_token:
+        kwargs['accessToken'] = access_token
+        claims = jwt.get_unverified_claims(access_token)
+
+    if claims and len(claims) > 0:
+        kwargs['context'] = _get_context_map(claims)
+
+    authz_response = _get_avp_client(region=region).is_authorized_with_token(**kwargs)
 
     return authz_response['decision']
 
