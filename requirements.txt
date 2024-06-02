@@ -12,7 +12,7 @@ orderedmultidict
 pyasn1
 pycparser
 python-jose
-requests==2.29.0
+requests
 requests-oauth2client
 retry
 rsa
