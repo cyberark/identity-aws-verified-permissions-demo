@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -23,19 +22,6 @@ class Identifier:
     entityId: str
     entityType: str
 
-
-def cognito_login(user_name: str, password: str, client_id: str,
-                  region: str) -> Dict:
-    client = boto3.client('cognito-idp', region)
-    response = client.initiate_auth(AuthFlow='USER_PASSWORD_AUTH',
-                                    AuthParameters={
-                                        'USERNAME': user_name,
-                                        'PASSWORD': password
-                                    },
-                                    ClientId=client_id)
-    return response
-
-
 @retry(tries=3, delay=2)
 def identity_login(identity_url: str, username: str, password: str) -> str:
     try:
@@ -56,7 +42,19 @@ def identity_login(identity_url: str, username: str, password: str) -> str:
 
 def _get_data_entities(token_claims: Dict,
                        user_attributes: Dict = None) -> List:
+    """ Get data entities from token claims and user attributes
+
+    Parameters:
+        token_claims:
+        user_attributes:
+
+    Returns:
+
+    """
     data_entities: List[Dict] = []
+    if not token_claims:
+        return data_entities
+
     # add roles from token
     for role in token_claims['user_roles']:
         data_entities.append({
@@ -88,6 +86,15 @@ def _get_data_entities(token_claims: Dict,
 @retry(tries=3, delay=2)
 def get_identity_user_attributes(tenant_url: str, token: str,
                                  user_id: str) -> Dict:
+    """ Get user attributes from the CyberArk Identity service
+    Parameters:
+        tenant_url: str: The tenant url
+        token: str: The token
+        user_id: str: The user id
+    Returns:
+        Dict: The user attributes dictionary
+    """
+
     # Get User attributes
     payload = {'Table': 'users', 'ID': user_id}
     headers = {
@@ -111,7 +118,12 @@ def get_identity_user_attributes(tenant_url: str, token: str,
 
 
 def _get_avp_client(region: str = 'us-east-1'):
-    # Create a client for the verifiedpermissions service
+    """ Get a client for the verifiedpermissions service
+    Parameters:
+        region: str: The AWS region
+    Returns:
+        boto3.client: The client for the verifiedpermissions service
+    """
     client = boto3.client('verifiedpermissions', region_name=region)
     return client
 
@@ -119,7 +131,9 @@ def _get_avp_client(region: str = 'us-east-1'):
 def _get_avp_common_kwargs(policy_store_id: str,
                            action: str,
                            resource_id: str = "",
-                           user_attributes: Dict = None) -> Dict:
+                           user_attributes: Dict = None,
+                           claims: Dict = None) -> Dict:
+    """ Get common kwargs for the AVP check_authorization method """
     kwargs = {
         'policyStoreId': policy_store_id,
         'action': {
@@ -151,7 +165,18 @@ def check_authorization(policy_store_id: str,
                         region: str,
                         resource_id: str = "",
                         token: str = "") -> str:
-    """ Check authorization for a given principal, action, resource and user attributes """
+
+    """ Check authorization using the AVP service
+    Parameters:
+        policy_store_id: str: The policy store id
+        principal_id: str: The principal id
+        action: str: The action to check
+        region: str: The AWS region
+        resource_id: str: The resource id
+        token: str: The token
+    Returns:
+        str: The result of the authorization check
+    """
 
     claims = jwt.get_unverified_claims(token)
     default_app = "__idaptive_cybr_user_oidc/"
@@ -218,10 +243,33 @@ def check_authorization_with_token(policy_store_id: str,
                                    resource_id: str = None,
                                    user_attributes: Dict = None) -> str:
 
+    """ Check authorization for a given principal, action, resource and user attributes
+    Parameters:
+        policy_store_id: str
+            The policy store id
+        region: str
+            The region where the verified permissions service is deployed
+        id_token: str
+            The id token
+        access_token: str
+            The access token
+        action: str
+            The action to be performed
+        resource_id: str
+            The resource id
+        user_attributes: Dict
+            The user attributes
+    Returns:
+        str
+            The authorization decision
+    """
+
     kwargs = _get_avp_common_kwargs(policy_store_id=policy_store_id,
                                     action=action,
                                     resource_id=resource_id,
                                     user_attributes=user_attributes)
+
+    # add entities and context
     if id_token:
         kwargs['identityToken'] = id_token
         claims = jwt.get_unverified_claims(id_token)
@@ -240,6 +288,19 @@ def check_authorization_with_token(policy_store_id: str,
 
 
 def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
+    """ Get user attributes from the tenant
+    Parameters:
+        tenant_url: str
+            The tenant url
+        token: str
+            The token
+        user_id: str
+            The user id
+    Returns:
+        Dict
+            The user attributes
+    """
+
     # Get User attributes
     payload = {'Table': 'users', 'ID': user_id}
     logger.info(f'payload is:{payload}')
@@ -274,6 +335,16 @@ def _get_user_attributes(tenant_url: str, token: str, user_id: str) -> Dict:
 
 def _get_identity_tenant_public_key(token: str,
                                     identity_public_key_url: str) -> jwk.Key:
+    """ Get the public key from the CyberArk Identity tenant
+    Parameters:
+        token: str
+            The token
+        identity_public_key_url: str
+            The identity public key url
+    Returns:
+        jwk.Key
+            The public key
+    """
     logger.info(
         f'request to get token public key via: {identity_public_key_url}')
     response = requests.get(
@@ -294,7 +365,7 @@ def _get_identity_tenant_public_key(token: str,
 
 def verify_oidc_token_signature(tenant_url: str, token: str) -> bool:
     """
-    Validate the oidc_token signature aagainst the CyberArk Identity public key.
+    Validate the oidc_token signature against the CyberArk Identity public key.
     TBD - Validate time
 
     Parameters:
