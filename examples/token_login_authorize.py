@@ -64,8 +64,37 @@ def exchange_code_for_token(code):
     id_token = token_data.get("id_token")
     return access_token, id_token
 
+def encode_base_64(str_to_encode):
+    """ encode base 64 """
+    import base64
+
+    str_bytes = str_to_encode.encode('ascii')
+    base64_bytes = base64.b64encode(str_bytes)
+    return base64_bytes.decode('ascii')
 
 def main():
+    username = "gil.adda@waseem.test"
+    password = "123Cyber"
+    url = f'{identity_url}/oauth2/token/__idaptive_cybr_user_oidc'
+    authorization_value: str = f'{username}:{password}'
+    payload = {'scope': 'api', 'grant_type': 'client_credentials'}
+    headers = {
+        'Authorization': f'Basic {encode_base_64(authorization_value)}',
+        'X-IDAP-NATIVE-CLIENT': 'true',
+    }
+    response = requests.post(url, headers=headers, data=payload, timeout=120)
+
+
+    url = f'{identity_url}/oauth2/platformtoken'
+    authorization_value: str = f'{username}:{password}'
+    payload = {'scope': 'api', 'grant_type': 'client_credentials'}
+    headers = {
+        'Authorization': f'Basic {encode_base_64(authorization_value)}',
+        'X-IDAP-NATIVE-CLIENT': 'true',
+    }
+    response = requests.post(url, headers=headers, data=payload, timeout=120)
+
+
     authorization_redirect_url = f"{authorization_url}?response_type=code&client_id={client_id}&redirect_uri={callback_url}&scope=openid profile"
     print("Authorization URL:", authorization_redirect_url)
     webbrowser.open(authorization_redirect_url)
