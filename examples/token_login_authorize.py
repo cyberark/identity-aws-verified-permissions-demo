@@ -31,7 +31,6 @@ parser.add_argument('-c',
                     required=True,
                     help='Client ID to login to the resource rest endpoint')
 
-
 parser.add_argument('-psi',
                     required=True,
                     help='Policy Store for ID Token Authorization')
@@ -40,9 +39,7 @@ parser.add_argument('-psa',
                     required=True,
                     help='Policy Store for Access Token Authorization')
 
-parser.add_argument('-region',
-                    required=False,
-                    help='Policy Store region')
+parser.add_argument('-region', required=False, help='Policy Store region')
 
 args = parser.parse_args()
 client_secret = os.environ.get("CLIENT_SECRET")
@@ -77,6 +74,7 @@ def exchange_code_for_token(code):
     id_token = token_data.get("id_token")
     return access_token, id_token
 
+
 def encode_base_64(str_to_encode):
     """ encode base 64 """
     import base64
@@ -84,6 +82,7 @@ def encode_base_64(str_to_encode):
     str_bytes = str_to_encode.encode('ascii')
     base64_bytes = base64.b64encode(str_bytes)
     return base64_bytes.decode('ascii')
+
 
 def main():
 
