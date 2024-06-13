@@ -31,6 +31,19 @@ parser.add_argument('-c',
                     required=True,
                     help='Client ID to login to the resource rest endpoint')
 
+
+parser.add_argument('-psi',
+                    required=True,
+                    help='Policy Store for ID Token Authorization')
+
+parser.add_argument('-psa',
+                    required=True,
+                    help='Policy Store for Access Token Authorization')
+
+parser.add_argument('-region',
+                    required=False,
+                    help='Policy Store region')
+
 args = parser.parse_args()
 client_secret = os.environ.get("CLIENT_SECRET")
 if not client_secret:
@@ -73,27 +86,6 @@ def encode_base_64(str_to_encode):
     return base64_bytes.decode('ascii')
 
 def main():
-    username = "gil.adda@waseem.test"
-    password = "123Cyber"
-    url = f'{identity_url}/oauth2/token/__idaptive_cybr_user_oidc'
-    authorization_value: str = f'{username}:{password}'
-    payload = {'scope': 'api', 'grant_type': 'client_credentials'}
-    headers = {
-        'Authorization': f'Basic {encode_base_64(authorization_value)}',
-        'X-IDAP-NATIVE-CLIENT': 'true',
-    }
-    response = requests.post(url, headers=headers, data=payload, timeout=120)
-
-
-    url = f'{identity_url}/oauth2/platformtoken'
-    authorization_value: str = f'{username}:{password}'
-    payload = {'scope': 'api', 'grant_type': 'client_credentials'}
-    headers = {
-        'Authorization': f'Basic {encode_base_64(authorization_value)}',
-        'X-IDAP-NATIVE-CLIENT': 'true',
-    }
-    response = requests.post(url, headers=headers, data=payload, timeout=120)
-
 
     authorization_redirect_url = f"{authorization_url}?response_type=code&client_id={client_id}&redirect_uri={callback_url}&scope=openid profile"
     print("Authorization URL:", authorization_redirect_url)
@@ -127,9 +119,14 @@ def main():
         f'session time uses as long: {session_time}, bit length: {session_time.bit_length()}'
     )
 
-    region = "us-east-2"
-    id_token_policy_store_id = "9iUWGprDm8ab6uBApD6Xjs"
-    access_token_policy_store_id = "AYTho6yZfpELQJh6Jkgacv"
+    if args.region:
+        region = args.region
+    else:
+        region = 'us-east-1'
+
+    id_token_policy_store_id = args.psi
+    access_token_policy_store_id = args.psa
+
     action = "View"
     try:
         print('Authorizing with ID Token...')

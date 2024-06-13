@@ -1,6 +1,6 @@
 {
   "static": {
-    "description": "an id token policy example that uses differnet types of conditions",
+    "description": "an id token policy example that uses different types of conditions",
     "statement": "permit ( principal in NAMESPACE::Role::\"System Administrator\", action in [NAMESPACE::Action::\"View\"], resource) when { principal has app_id && principal.app_id == \"AVPCyberArk\" && principal has name && principal.name like \"Prata*\" && principal.session_time_long > 100000 && principal.session_config_json.session_idle > 20 };"
   }
 }
