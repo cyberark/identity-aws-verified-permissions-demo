@@ -26,10 +26,12 @@ AccessTokenPolicyStoreId=$(aws cloudformation describe-stacks --stack-name $STAC
 echo "AccessTokenPolicyStoreId: $AccessTokenPolicyStoreId"
 
 # set the identity-source-configuration for the ID Token
-aws verifiedpermissions create-identity-source --configuration file://config/identity-source-config-id-token.json  \
+id_config=$(sed "s/<tenant-url>/$1/g" ./config/identity-source-config-id-token.json)
+aws verifiedpermissions create-identity-source --configuration "$id_config" \
     --principal-entity-type "NAMESPACE::User" --policy-store-id $IdTokenPolicyStoreId
 
 # set the identity-source-configuration for the Access Token
-aws verifiedpermissions create-identity-source --configuration file://config/identity-source-config-access-token.json  \
+access_config=$(sed "s/<tenant-url>/$1/g" ./config/identity-source-config-access-token.json)
+aws verifiedpermissions create-identity-source --configuration "$access_config"  \
     --principal-entity-type "NAMESPACE::User" --policy-store-id $AccessTokenPolicyStoreId
 

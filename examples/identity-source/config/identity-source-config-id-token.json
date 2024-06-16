@@ -1,6 +1,6 @@
 {
   "openIdConnectConfiguration": {
-    "issuer": "https://aaj7496.my.dev.idaptive.app/AVPCyberArk/",
+    "issuer": "https://<tenant-url>/AVPCyberArk/",
     "tokenSelection": {
       "identityTokenOnly": {
         "principalIdClaim": "sub"

@@ -1,5 +1,5 @@
-# a flask application that opens a flast rest api with a route of /redirect and has a query parameter called code. it printes the code in
-# the response as json
+# a flask application that exposes a rest API with a route of /redirect and has a query parameter called code.
+# It prints the code in a text box with a button to copies it to the clipboard.
 
 import requests
 from flask import Flask, jsonify, request

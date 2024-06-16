@@ -46,6 +46,7 @@ def _get_data_entities(token_claims: Dict,
         user_attributes:
 
     Returns:
+        List: The data entities list
 
     """
     data_entities: List[Dict] = []
@@ -353,7 +354,8 @@ def _get_identity_tenant_public_key(token: str,
         raise ValueError('identity response is empty')
     logger.info(f'response text is: {response.text}')
     response_dict = json.loads(response.text)
-    if not response_dict.get('keys', []):
+
+    if not response_dict.get('keys'):
         raise ValueError('keys not found in response')
     key = response_dict['keys'][0]
 

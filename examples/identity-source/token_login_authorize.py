@@ -1,4 +1,5 @@
 import argparse
+import base64
 import os
 import webbrowser
 from getpass import getpass
@@ -83,7 +84,6 @@ def exchange_code_for_token(code):
 
 def encode_base_64(str_to_encode):
     """ encode base 64 """
-    import base64
 
     str_bytes = str_to_encode.encode('ascii')
     base64_bytes = base64.b64encode(str_bytes)
@@ -124,10 +124,7 @@ def main():
         f'session time uses as long: {session_time}, bit length: {session_time.bit_length()}'
     )
 
-    if args.region:
-        region = args.region
-    else:
-        region = 'us-east-1'
+    region = args.region or 'us-east-1'
 
     id_token_policy_store_id = args.psi
     access_token_policy_store_id = args.psa
