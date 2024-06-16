@@ -6,7 +6,6 @@ from pprint import pprint
 
 import requests
 from jose import jwt
-
 from utils.utils import check_authorization_with_token
 
 parser = argparse.ArgumentParser()
@@ -92,7 +91,6 @@ def encode_base_64(str_to_encode):
 
 
 def main():
-
 
     authorization_redirect_url = f"{authorization_url}?response_type=code&client_id={client_id}&redirect_uri={callback_url}&scope=openid profile"
     print("Authorization URL:", authorization_redirect_url)
