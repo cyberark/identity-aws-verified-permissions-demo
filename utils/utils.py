@@ -47,14 +47,15 @@ def _get_data_entities(token_claims: Dict,
 
     Returns:
         List: The data entities list
-
     """
-    data_entities: List[Dict] = []
     if not token_claims:
-        return data_entities
+        return None
 
     # add roles from token
-    for role in token_claims['user_roles']:
+    groups = token_claims.get('user_roles') or token_claims.get('roles') or token_claims.get('groups')
+
+    data_entities: List[Dict] = []
+    for role in groups:
         data_entities.append({
             'identifier':
             asdict(Identifier(entityType='UserGroup', entityId=role))
@@ -64,20 +65,15 @@ def _get_data_entities(token_claims: Dict,
     user_entity = {
         'identifier':
         asdict(Identifier(entityType='User', entityId=token_claims['sub'])),
-        'parents': []
     }
     if user_attributes:
-        user_attributes_dict = {}
-        for attribute in user_attributes:
-            user_attributes_dict[attribute] = {
-                'string': user_attributes[attribute]
-            }
-        user_entity['attributes'] = user_attributes_dict
+        user_entity['attributes'] = {attribute: {'string': user_attributes[attribute]} for attribute in user_attributes}
 
-    for role in token_claims['user_roles']:
-        user_entity['parents'].append(
-            asdict(Identifier(entityType='UserGroup', entityId=role)))
+    if groups:
+        user_entity['parents'] =  [asdict(Identifier(entityType='UserGroup', entityId=role)) for role in groups]
+
     data_entities.append(user_entity)
+
     return data_entities
 
 
@@ -144,7 +140,7 @@ def _get_avp_common_kwargs(policy_store_id: str,
         kwargs['resource'] = asdict(
             Identifier(entityType='Resource', entityId=resource_id))
 
-    if user_attributes and len(user_attributes) > 0:
+    if user_attributes and len(user_attributes) > 0 or claims:
         entities = {
             'entityList':
             _get_data_entities(token_claims=claims,
@@ -262,19 +258,17 @@ def check_authorization_with_token(policy_store_id: str,
             The authorization decision
     """
 
+    claims = jwt.get_unverified_claims(id_token or access_token)
     kwargs = _get_avp_common_kwargs(policy_store_id=policy_store_id,
                                     action=action,
                                     resource_id=resource_id,
-                                    user_attributes=user_attributes)
-
-    # add entities and context
+                                    user_attributes=user_attributes,
+                                    claims=claims)
     if id_token:
         kwargs['identityToken'] = id_token
-        claims = jwt.get_unverified_claims(id_token)
 
     elif access_token:
         kwargs['accessToken'] = access_token
-        claims = jwt.get_unverified_claims(access_token)
 
     if claims and len(claims) > 0:
         kwargs['context'] = _get_context_map(claims)
