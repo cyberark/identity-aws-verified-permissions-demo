@@ -48,7 +48,7 @@ This script creates the following resources:
 - Converts the decision to an IAM Policy format and returns it (to the API Gateway)
 
 ### Script outputs
-Running this AWS CloudFormation template will create the following resources:
+Deploying this AWS CloudFormation template will create the following resources:
 - An AWS API Gateway with a token authorizer. The API Gateway name is 'Sample API Gateway'
 - A resource called **'protected-resource'** with POST method. 
   - To access to that resource, you need to provide a valid token. 

@@ -52,13 +52,13 @@ def _get_data_entities(token_claims: Dict,
         return None
 
     # add roles from token
-    groups = token_claims.get('user_roles') or token_claims.get('roles') or token_claims.get('groups')
+    groups = token_claims.get('user_roles') or token_claims.get('roles') or token_claims.get('groups') or []
 
     data_entities: List[Dict] = []
-    for role in groups:
+    for group in groups:
         data_entities.append({
             'identifier':
-            asdict(Identifier(entityType='UserGroup', entityId=role))
+            asdict(Identifier(entityType='UserGroup', entityId=group))
         })
 
     # add user and role parents
