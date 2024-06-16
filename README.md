@@ -1,6 +1,6 @@
 # Identity Verified Permissions Demo
 
-**Disclaimer:** This is not production grade code. You should not use this Content in your production accounts, or on production or other critical data. You are responsible for testing, securing, and optimizing the Content, such as sample code, as appropriate for production grade use based on your specific quality control practices and standards. Deploying Content may incur AWS charges for creating or using AWS chargeable resources.
+**Disclaimer:** This is not a production-grade code. You should not use this Content in your production accounts, or on production or other critical data. You are responsible for testing, securing, and optimizing the Content, such as sample code, as appropriate for production grade use based on your specific quality control practices and standards. Deploying Content may incur AWS charges for creating or using AWS chargeable resources.
 
 This is a demo project to present Amazon API Gateway access control based on Amazon Verified Permissions as the access control engine and an API Gateway Lambda authorizer as the method to control the access to Amazon API Gateway resources. A Lambda authorizer is an Amazon API Gateway feature that uses an AWS Lambda function to control access to your API. When a client makes a request to access a resource, Amazon API Gateway calls your Lambda authorizer, which takes the caller's identity as input and returns an IAM policy as output. Amazon API Gateway then uses this IAM policy to authorize the request to the method.
 
@@ -25,22 +25,49 @@ Checkout our open source projects: [https://github.com/cyberark/](https://github
 To create the API Gateway with the token authorizer code and a resource use the following command:
 
 ```bash
-./prepare_authorizer_package.sh <s3 bucket name> <verified permissions policy store id> <cyberark identity url> <region>
+./prepare_authorizer_package.sh <s3 bucket name> <cyberark identity url> <region>
 ```
 
 For example:
-
 ```bash
-./prepare_authorizer_package.sh avp-demo-bucket ps-1234-5678 https://xxxx.id.integration-cyberark.cloud/ us-east-1
+./prepare_authorizer_package.sh avp-demo-bucket https://xxxx.id.integration-cyberark.cloud/ us-east-1
 ```
 
-### AWS Lambda Authorizer token authorizer performs
+This script creates the following resources:
+- A Lambda function that acts as a Custom Lambda Authorizer
+- An API Gateway with a resource that is protected by the token authorizer
+- A policy store and a policy for the token authorizer
+
+
+### AWS Lambda Authorizer Token Authorizer Performs
 
 - Validate token signature and extracts the claims in it
 - Retrieve user attributes
 - Formalize the token claims to Amazon Verified Permissions format
 - Invokes an authorization check using Amazon Verified Permissions and gets the decision
 - Converts the decision to an IAM Policy format and returns it (to the API Gateway)
+
+### Script outputs
+Deploying this AWS CloudFormation template will create the following resources:
+- An AWS API Gateway with a token authorizer. The API Gateway name is 'Sample API Gateway'
+- A resource called **'protected-resource'** with POST method. 
+  - To access to that resource, you need to provide a valid token. 
+  - The token is validated using the Lambda authorizer.
+- An AWS Lambda function that acts as a token authorizer. The name of the Lambda function is 'avp-lambda-authorizer'
+  - The Lambda authorizer is invoked by the API Gateway to authorize the request.
+  - The authorization is done using is_authorized() function in the lambda authorizer. 
+- An API Gateway Custom Authorizer that extracts the principal from the token claims
+  - The name of the custom authorizer is 'AmazonVerifiedPermissionAuthorizer' 
+and calls the lambda function called 'avp-lambda-authorizer'
+    retrieves additional user attributes from CyberArk Identity
+  - The AWS Lambda authorizer invokes the Amazon Verified Permissions service to authorize the request.
+  - The authorization is done using is_authorized() function in the lambda authorizer.
+- An AWS Lambda that acts as a resource handler. The name of the Lambda function is 'protected-resource-service-lambda'
+  - The Lambda function is invoked by the API Gateway to handle the request.
+  - The Lambda function returns a message 'Hello from Lambda!' if the request is authorized.
+
+```bash
+
 
 ## Testing the setup
 
@@ -55,11 +82,12 @@ To invoke the script run:
 ```bash
 python access-demo-resource.py -u <username> -i <identity url> -g <resource url>
 ```
-Enter your password on this propmt "Enter your password: " and the script will invoke a login and API Gateway Call. 
+Enter your password on this prompt "Enter your password: " and the script will invoke a login and API Gateway Call. 
+
 
 ### Comments
 
-1. the user name should be in this pattern: `user_name@cyberark_identity_domain`. For example, `my_user@trialdomain`.
+1. the username should be in this pattern: `user_name@cyberark_identity_domain`. For example, `my_user@trialdomain`.
 2. You can change the user attributes. For example, use different `user_dept` value.
 
 In case you are authorized, the result message is `Hello from Lambda!`. Otherwise, you get `User is not authorized to access this resource with an explicit deny`.
@@ -76,4 +104,4 @@ These are the common steps to troubleshoot:
 
 # License
 
-Theese code examples are licensed under the Apache License 2.0 - see [`LICENSE`](LICENSE.md) for more details.
+These code examples are licensed under the Apache License 2.0 - see [`LICENSE`](LICENSE.md) for more details.

@@ -2,8 +2,6 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: An API Gateway and Lambda function with a custom Lambda Authorizer based on CyberArk Identity and Amazon Verified Permissions
 
 Parameters:
-  policyStoreID:
-    Type: String
   IdentityTenantUrl:
     Type: String
   lambdaFunctionName:
@@ -85,7 +83,7 @@ Resources:
       ResourceId: !Ref ProtectedResource
       HttpMethod: POST
       AuthorizationType: CUSTOM
-      AuthorizerId: !Ref AmazonVerifiedPermissionTokenAuthorizer
+      AuthorizerId: !Ref AmazonVerifiedPermissionAuthorizer
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
@@ -97,6 +95,7 @@ Resources:
       - ProtectedResource
       - SampleServiceLambdaFunction
 
+
   AVPAPIGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     Properties:
@@ -105,10 +104,10 @@ Resources:
     DependsOn:
       - ProtectedPostMethod
 
-  AmazonVerifiedPermissionTokenAuthorizer:
+  AmazonVerifiedPermissionAuthorizer:
     Type: AWS::ApiGateway::Authorizer
     Properties:
-      Name: AmazonVerifiedPermissionTokenAuthorizer
+      Name: AmazonVerifiedPermissionAuthorizer
       Type: TOKEN
       IdentitySource: method.request.header.Authorization
       RestApiId: !Ref SampleRestApi
@@ -122,16 +121,16 @@ Resources:
   AVPAuthorizerLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: avp-authorizer
-      Description: This is an example for Amazon Verfied Permissions Token Authorizer
+      FunctionName: avp-lambda-authorizer
+      Description: This is an example for Amazon Verfied Permissions Custom Authorizer
       Handler: lambda_function.lambda_handler
       Role: !GetAtt AVPAuthorizerLambdaExecutionRole.Arn
-      Code: package/
+      Code: temp_dir/
       Runtime: python3.9
       Environment:
         Variables:
           TENANT_IDENTITY_URL: !Ref IdentityTenantUrl
-          POLICY_STORE_ID: !Ref policyStoreID
+          POLICY_STORE_ID: !Ref SampleAVPPolicyStore
           AWS_DATA_PATH: ./models
     DependsOn:
     - AVPAuthorizerLambdaExecutionRole
@@ -172,6 +171,7 @@ Resources:
     DependsOn:
       - SampleRestApi
       - AVPAuthorizerLambdaFunction
+
     Properties:
       FunctionName: !Ref AVPAuthorizerLambdaFunction
       Action: lambda:InvokeFunction
@@ -188,4 +188,31 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SampleRestApi}/*/*"
-      
+
+  SampleAVPPolicyStore:
+    Type: AWS::VerifiedPermissions::PolicyStore
+    Properties:
+      Description: "Example policy store to manage cedar policies for the lambda authorizer"
+      ValidationSettings:
+        Mode: "OFF"
+
+  SampleAVPPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+        Definition:
+          Static:
+            Description: Example authorization policy based on the day of the week, user department and project
+            Statement: 'permit (
+                            principal in UserGroup::"System Administrator",
+                            action == Action::"POST",
+                            resource == Resource::"protected-resource"
+                        )
+                        when
+                        {
+                            [0, 1, 2, 3, 4].contains(context.weekday) &&
+                            principal.user_dept == "Dev" &&
+                            principal.user_project == "Eagle"
+                        }; '
+        PolicyStoreId: !Ref SampleAVPPolicyStore
+    DependsOn:
+    - SampleAVPPolicyStore

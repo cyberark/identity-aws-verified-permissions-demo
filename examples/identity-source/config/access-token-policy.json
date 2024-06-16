@@ -1,0 +1,6 @@
+{
+  "static": {
+    "description": "an id token policy example that uses different types of conditions",
+    "statement": "permit ( principal in NAMESPACE::Role::\"System Administrator\", action in [NAMESPACE::Action::\"View\"], resource) when { context has token && context.token has app_id && context.token.app_id == \"AVPCyberArk\" && context.token has auth_time && context.token.auth_time > 100000 && context.token has project_list && context.token.project_list.contains(\"Lion\") };"
+  }
+}

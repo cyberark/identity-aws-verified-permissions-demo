@@ -1,0 +1,14 @@
+{
+  "openIdConnectConfiguration": {
+    "issuer": "https://<tenant-url>/AVPCyberArk/",
+    "groupConfiguration": {
+      "groupClaim": "roles",
+      "groupEntityType": "NAMESPACE::Role"
+    },
+    "tokenSelection": {
+      "accessTokenOnly": {
+        "principalIdClaim": "sub"
+      }
+    }
+  }
+}
