@@ -9,7 +9,6 @@ import boto3
 import requests
 from jose import jwk, jwt
 from jose.utils import base64url_decode
-from requests.auth import HTTPBasicAuth
 from requests_oauth2client import OAuth2Client
 from retry import retry
 
