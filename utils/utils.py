@@ -25,8 +25,6 @@ class Identifier:
 @retry(tries=3, delay=2)
 def identity_login(identity_url: str, username: str, password: str) -> str:
     try:
-        auth_headers = HTTPBasicAuth(username, password)
-
         print('identity url:', identity_url)
         oauth2client = OAuth2Client(
             token_endpoint=f'{identity_url}/oauth2/platformtoken',
@@ -162,7 +160,6 @@ def _get_avp_common_kwargs(policy_store_id: str,
 def check_authorization(policy_store_id: str,
                         principal_id: str,
                         action: str,
-                        region: str,
                         resource_id: str = "",
                         token: str = "") -> str:
 
@@ -208,6 +205,7 @@ def check_authorization(policy_store_id: str,
             Identifier(entityType='User', entityId=principal_id))
 
     # add entities and context
+    region = boto3.session.Session().region_name
     authz_response = _get_avp_client(region=region).is_authorized(**kwargs)
 
     return authz_response['decision']

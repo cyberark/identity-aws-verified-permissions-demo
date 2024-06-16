@@ -4,8 +4,7 @@ from typing import Dict
 
 from jose import jwt
 
-from utils.utils import (_get_user_attributes, check_authorization,
-                         verify_oidc_token_signature)
+from utils.utils import check_authorization, verify_oidc_token_signature
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
