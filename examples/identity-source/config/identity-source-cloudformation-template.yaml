@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: An Policy Store with a scehma definition for ID Token and Access Token with CyberArk Identity
+
+Resources:
+  IDTokenAVPPolicyStore:
+    Type: AWS::VerifiedPermissions::PolicyStore
+    Properties:
+      Description: "ID Token Policy Store - Created by CloudFormation Template"
+      Schema:
+        CedarJson: '{"NAMESPACE":{"entityTypes":{"Application":{"memberOfTypes":[],"shape":{"type":"Record","attributes":{}}},"Role":{"shape":{"attributes":{},"type":"Record"},"memberOfTypes":[]},"User":{"shape":{"attributes":{"phone_number_verified":{"type":"Boolean"},"phone_number":{"type":"String"},"project_list":{"type":"Set","required":true,"element":{"type":"String"}},"name":{"required":true,"type":"String"},"email":{"type":"String"},"session_config_json":{"type":"session_config_json_type","required":true},"app_id":{"type":"String","required":true},"email_verified":{"type":"Boolean"},"session_time_long":{"required":true,"type":"Long"},"family_name":{"type":"String","required":true}},"type":"Record"},"memberOfTypes":["Role"]}},"actions":{"View":{"appliesTo":{"principalTypes":["User"],"resourceTypes":["Application"],"context":{"type":"Record","attributes":{}}},"memberOf":[]}},"commonTypes":{"session_config_json_type":{"type":"Record","attributes":{"session_idle":{"required":true,"type":"Long"},"timeout":{"required":true,"type":"Long"}}}}}}'
+      ValidationSettings:
+        Mode: "STRICT"
+
+  IDTokenAVPPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+        Definition:
+          Static:
+            Description: Example authorization policy based on the day of the week, user department and project
+            Statement: 'permit (
+                            principal in NAMESPACE::Role::"System Administrator",
+                            action in [NAMESPACE::Action::"View"],
+                            resource
+                        )
+                        when
+                        {
+                            principal has app_id &&
+                            principal.app_id == "AVPCyberArk" &&
+                            principal has name &&
+                            principal.name like "Prata*" &&
+                            principal.session_time_long > 100000 &&
+                            principal.session_config_json.session_idle > 20
+                        };'
+        PolicyStoreId: !Ref IDTokenAVPPolicyStore
+    DependsOn:
+    - IDTokenAVPPolicyStore
+
+  AccessTokenAVPPolicyStore:
+    Type: AWS::VerifiedPermissions::PolicyStore
+    Properties:
+      Description: "Access Token Policy Store - Created by CloudFormation Template"
+      Schema:
+        CedarJson: '{"NAMESPACE":{"entityTypes":{"Role":{"shape":{"attributes":{},"type":"Record"},"memberOfTypes":[]},"User":{"shape":{"type":"Record","attributes":{"phone_number_verified":{"type":"Boolean"},"phone_number":{"type":"String"},"family_name":{"type":"String","required":true},"name":{"type":"String","required":true},"app_id":{"type":"String","required":true},"email_verified":{"type":"Boolean"},"email":{"type":"String"}}},"memberOfTypes":["Role"]},"Application":{"memberOfTypes":[],"shape":{"type":"Record","attributes":{}}}},"commonTypes":{"ReusedContext":{"type":"Record","attributes":{"token":{"attributes":{"auth_time":{"type":"Long"},"project_list":{"type":"Set","element":{"type":"String"}},"app_id":{"type":"String"},"unique_name":{"type":"String"}},"type":"Record"}}}},"actions":{"View":{"appliesTo":{"context":{"attributes":{},"type":"ReusedContext"},"resourceTypes":["Application"],"principalTypes":["User"]},"memberOf":[]}}}}'
+      ValidationSettings:
+        Mode: "STRICT"
+
+  AccessTokenAVPPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+      Definition:
+        Static:
+          Description: Example authorization policy based on the day of the week, user department and project
+          Statement: 'permit (
+                          principal in NAMESPACE::Role::"System Administrator",
+                          action in [NAMESPACE::Action::"View"],
+                          resource
+                      )
+                      when
+                      {
+                          context has token &&
+                          context.token has app_id &&
+                          context.token.app_id == "AVPCyberArk" &&
+                          context.token has auth_time &&
+                          context.token.auth_time > 100000 &&
+                          context.token has project_list &&
+                          context.token.project_list.contains("Lion")
+                      };'
+      PolicyStoreId: !Ref AccessTokenAVPPolicyStore
+    DependsOn:
+      - AccessTokenAVPPolicyStore
+
+Outputs:
+
+  IdTokenPolicyStore:
+    Description: ID Token Policy Store
+    Value: !Ref IDTokenAVPPolicyStore
+
+  AccessTokenPolicyStore:
+    Description: Access Token Policy Store
+    Value: !Ref AccessTokenAVPPolicyStore
+

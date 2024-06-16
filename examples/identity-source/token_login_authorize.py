@@ -27,9 +27,12 @@ parser.add_argument(
 )
 
 parser.add_argument('-c',
-                    '--client',
                     required=True,
-                    help='Client ID to login to the resource rest endpoint')
+                    help='Client ID to request access/id token')
+
+parser.add_argument('-s',
+                    required=True,
+                    help='Client Secret to request access/id token')
 
 parser.add_argument('-psi',
                     required=True,
@@ -42,12 +45,16 @@ parser.add_argument('-psa',
 parser.add_argument('-region', required=False, help='Policy Store region')
 
 args = parser.parse_args()
-client_secret = os.environ.get("CLIENT_SECRET")
+
+# Get the client secret from command line arguments or environment variables
+client_secret = args.s
+if not client_secret:
+    client_secret = os.environ.get("CLIENT_SECRET")
 if not client_secret:
     client_secret = getpass("Enter user password: ")
 
 # Replace these with your client ID and client secret
-client_id = args.client
+client_id = args.c
 
 # Token endpoint
 identity_url = args.identity_url
@@ -85,6 +92,7 @@ def encode_base_64(str_to_encode):
 
 
 def main():
+
 
     authorization_redirect_url = f"{authorization_url}?response_type=code&client_id={client_id}&redirect_uri={callback_url}&scope=openid profile"
     print("Authorization URL:", authorization_redirect_url)

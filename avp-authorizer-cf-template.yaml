@@ -76,15 +76,6 @@ Resources:
     DependsOn:
     - SampleRestApi
 
-  ProtectedResourceWithToken:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt SampleRestApi.RootResourceId
-      PathPart: protected-resource-token
-      RestApiId: !Ref SampleRestApi
-    DependsOn:
-      - SampleRestApi
-
   ProtectedPostMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -104,24 +95,6 @@ Resources:
       - ProtectedResource
       - SampleServiceLambdaFunction
 
-  ProtectedWithTokenPostMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref SampleRestApi
-      ResourceId: !Ref ProtectedResourceWithToken
-      HttpMethod: POST
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref AmazonVerifiedPermissionTokenAuthorizer
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub
-          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
-          - lambdaArn: !GetAtt SampleServiceLambdaFunction.Arn
-    DependsOn:
-      - SampleRestApi
-      - ProtectedResourceWithToken
-      - SampleServiceLambdaFunction
 
   AVPAPIGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -130,20 +103,6 @@ Resources:
       StageName: test
     DependsOn:
       - ProtectedPostMethod
-
-  AmazonVerifiedPermissionTokenAuthorizer:
-    Type: AWS::ApiGateway::Authorizer
-    Properties:
-      Name: AmazonVerifiedPermissionTokenAuthorizer
-      Type: TOKEN
-      IdentitySource: method.request.header.Authorization
-      RestApiId: !Ref SampleRestApi
-      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AVPAuthorizerWithTokenLambdaFunction.Arn}/invocations"
-      AuthorizerResultTtlInSeconds: 0
-    DependsOn:
-      - SampleRestApi
-      - AVPAuthorizerWithTokenLambdaFunction
-      - AVPAuthorizerLambdaExecutionRole
 
   AmazonVerifiedPermissionAuthorizer:
     Type: AWS::ApiGateway::Authorizer
@@ -175,25 +134,6 @@ Resources:
           AWS_DATA_PATH: ./models
     DependsOn:
     - AVPAuthorizerLambdaExecutionRole
-
-  AVPAuthorizerWithTokenLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: avp-lambda-authorizer-with-token
-      Description: This is an example for Amazon Verfied Permissions Custom Authorizer based on a token
-      Handler: lambda_function_with_token.lambda_handler
-      Role: !GetAtt AVPAuthorizerLambdaExecutionRole.Arn
-      Code: temp_dir/
-      Runtime: python3.9
-      Environment:
-        Variables:
-          TENANT_IDENTITY_URL: !Ref IdentityTenantUrl
-          POLICY_STORE_ID: !Ref SampleAVPPolicyStore
-          AWS_DATA_PATH: ./models
-    DependsOn:
-      - AVPAuthorizerLambdaExecutionRole
-      - SampleAVPPolicyStore
-
 
   AVPAuthorizerLambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -231,7 +171,6 @@ Resources:
     DependsOn:
       - SampleRestApi
       - AVPAuthorizerLambdaFunction
-      - AVPAuthorizerWithTokenLambdaFunction
 
     Properties:
       FunctionName: !Ref AVPAuthorizerLambdaFunction
@@ -250,27 +189,12 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SampleRestApi}/*/*"
 
-
-#  Create an
-
   SampleAVPPolicyStore:
     Type: AWS::VerifiedPermissions::PolicyStore
     Properties:
-      Description: "Example policy store to manage cedar policies"
+      Description: "Example policy store to manage cedar policies for the lambda authorizer"
       ValidationSettings:
         Mode: "OFF"
-
-  SampleIdentitySource:
-    Type: AWS::VerifiedPermissions::IdentitySource
-    Properties:
-      Description: "Example identity source to be able to perform authorization based on OIDC tokens"
-      Configuration:
-          CognitoUserPoolConfiguration:
-            UserPoolArn: arn:aws:cognito-idp:us-east-1:450676674096:userpool/us-east-1_GvwMVObxv
-            ClientIds:
-              - 28bfvqhtanq71gln367k4e29bq
-      PolicyStoreId: !Ref SampleAVPPolicyStore
-      PrincipalEntityType: "User"
 
   SampleAVPPolicy:
     Type: AWS::VerifiedPermissions::Policy

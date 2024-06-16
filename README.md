@@ -33,6 +33,14 @@ For example:
 ./prepare_authorizer_package.sh avp-demo-bucket https://xxxx.id.integration-cyberark.cloud/ us-east-1
 ```
 
+This stript creates the following resources:
+- A Lambda function that acts as a token authorizer
+- A Lambda function that acts as a token authorizer with a token
+- An API Gateway with a resource that is protected by the token authorizer
+- An API Gateway with a resource that is protected by the token authorizer with a token
+- A policy store with a schema for an ID Token authorizer
+
+
 ### AWS Lambda Authorizer token authorizer performs
 
 - Validate token signature and extracts the claims in it
